@@ -390,7 +390,7 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
    * Hiding super field because it's actually the same object, just with a stronger type.
    */
   @SuppressWarnings("hiding")
-  protected final HostedModeOptions options = (HostedModeOptionsImpl) super.options;
+  protected final HostedModeOptionsImpl options = (HostedModeOptionsImpl) super.options;
 
   /**
    * The server that was started.
@@ -403,6 +403,8 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
    * Tracks whether we created a temp workdir that we need to destroy.
    */
   private boolean tempWorkDir = false;
+
+  protected int codeServerPort = -1;
 
   /**
    * Default constructor for testing; no public API yet.
@@ -609,6 +611,7 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
                 browserHost));
       }
       listener.start();
+      codeServerPort = listener.getSocketPort();
     }
   }
 

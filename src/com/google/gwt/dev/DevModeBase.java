@@ -97,7 +97,7 @@ public abstract class DevModeBase implements DoneCallback {
         assert (moduleDef != null);
 
         ArchivePreloader.preloadArchives(logger, moduleDef);
-        
+
         // get compilation state, but use reflection so as we are compatible with versions
         // 2.5.x and 2.6.x
         CompilationState compilationState = null;
@@ -119,7 +119,7 @@ public abstract class DevModeBase implements DoneCallback {
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
-        
+
         ShellModuleSpaceHost host =
             doCreateShellModuleSpaceHost(logger, compilationState, moduleDef);
         return host;
@@ -802,7 +802,7 @@ public abstract class DevModeBase implements DoneCallback {
     // Set any platform specific system properties.
     BootStrapPlatform.initHostedMode();
     BootStrapPlatform.applyPlatformHacks();
-    
+
     try {
       Class<?> builderClazz = Class.forName("com.google.gwt.dev.CompilerContext$Builder");
       Method buildMethod = builderClazz.getMethod("build");
@@ -812,7 +812,7 @@ public abstract class DevModeBase implements DoneCallback {
     } catch (Exception e) {
       System.out.println("Running GPE launcher for GWT-2.5.x version.");
     }
-    
+
     options = createOptions();
   }
 
@@ -1025,15 +1025,15 @@ public abstract class DevModeBase implements DoneCallback {
    * @return the loaded module
    * @throws UnableToCompleteException
    */
-  
-  private Object compilerContext = null;
-  private Object compilerContextBuilder = null;
+
+  protected Object compilerContext = null;
+  protected Object compilerContextBuilder = null;
 
   protected ModuleDef loadModule(TreeLogger logger, String moduleName, boolean refresh)
       throws UnableToCompleteException {
-    
+
     ModuleDef moduleDef = null;
-    
+
     Class<?> moduleDefLoaderClazz = null;
     try {
       moduleDefLoaderClazz = Class.forName("com.google.gwt.dev.cfg.ModuleDefLoader");
@@ -1057,7 +1057,7 @@ public abstract class DevModeBase implements DoneCallback {
         e2.printStackTrace();
       }
     }
-    
+
     assert (moduleDef != null) : "Required module state is absent";
     return moduleDef;
   }
