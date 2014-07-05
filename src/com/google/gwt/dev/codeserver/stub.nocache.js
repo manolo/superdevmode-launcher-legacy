@@ -84,15 +84,18 @@
   // The user can remove this: .gwt-superdev-compile{display:none}
   // Goal: no need to install bookmarker for host:port/module
   var compileDiv = $doc.createElement('div');
-  compileDiv.innerHTML = "\u21bb";
+  compileDiv.innerHTML = 
+      "<div style='font-family:arial;cursor:pointer;color:#B62323;text-shadow:grey 1px 1px 3px'>" +
+      "\u21bb<div style='position:absolute;right:16%;bottom:0px;font-size:18%;'>GWT</div>" +
+      "</div>";
   compileDiv.title = 'Compile module: __MODULE_NAME__';
   compileDiv.className = 'gwt-superdev-compile';
   compileDiv.style.position = 'fixed';
-  compileDiv.style.right = '2px';
+  compileDiv.style.right = '3px';
   compileDiv.style.bottom = '2px';
-  compileDiv.style.cursor = 'pointer';
-  compileDiv.style.fontSize = '24px';
-  compileDiv.style.fontFamily = 'arial';
+  compileDiv.style.lineHeight = '2em';
+  compileDiv.style.fontSize = '2em';
+
   compileDiv.style.zindex = 2147483646;
   compileDiv.onclick = function() {
     compile();
