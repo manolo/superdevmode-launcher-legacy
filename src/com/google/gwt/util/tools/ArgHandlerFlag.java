@@ -1,16 +1,14 @@
 /*
  * Copyright 2006 Google Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
 package com.google.gwt.util.tools;
@@ -31,11 +29,6 @@ public abstract class ArgHandlerFlag extends ArgHandler {
 
   private Map<String, Boolean> valuesByTag;
 
-  protected void addTagValue(String tag, boolean value) {
-    initValuesByTag();
-    valuesByTag.put(tag, value);
-  }
-
   /**
    * Returns the default value that will appear in help messages.
    */
@@ -50,13 +43,10 @@ public abstract class ArgHandlerFlag extends ArgHandler {
    * The root String that will be munged into -label and -nolabel variants for flag value toggling.
    * Should follow the verb[Adjective]Noun naming pattern. For example:
    *
-   * @Override
-   * public String getLabel() {
-   *   return "allowMissingSrc";
-   * }
+   * @Override public String getLabel() { return "allowMissingSrc"; }
    */
   public String getLabel() {
-    return "";
+    return getTag().replace("-no", "");
   }
 
   @Override
@@ -95,27 +85,11 @@ public abstract class ArgHandlerFlag extends ArgHandler {
     return tags.toArray(new String[tags.size()]);
   }
 
-  // @VisibleForTesting
-  boolean getValueByTag(String tag) {
-    initValuesByTag();
-    return valuesByTag.get(tag);
-  }
-
   @Override
   public int handle(String[] args, int startIndex) {
     String tag = args[startIndex];
     Boolean value = getValueByTag(tag);
     return setFlag(value) ? 0 : 1;
-  }
-
-  private void initValuesByTag() {
-    if (valuesByTag != null) {
-      return;
-    }
-
-    valuesByTag = new LinkedHashMap<String, Boolean>();
-    valuesByTag.put("-" + (isExperimental() ? "X" : "") + getLabel(), true);
-    valuesByTag.put("-" + (isExperimental() ? "X" : "") + "no" + getLabel(), false);
   }
 
   @Override
@@ -130,5 +104,30 @@ public abstract class ArgHandlerFlag extends ArgHandler {
    * @param value the new value for the flag.
    * @return whether the assignment was valid.
    */
-  public abstract boolean setFlag(boolean value);
+  public boolean setFlag(boolean value) {
+    initValuesByTag();
+    valuesByTag.put(getTag(), value);
+    return true;
+  }
+
+  protected void addTagValue(String tag, boolean value) {
+    initValuesByTag();
+    valuesByTag.put(tag, value);
+  }
+
+  // @VisibleForTesting
+  boolean getValueByTag(String tag) {
+    initValuesByTag();
+    return valuesByTag.get(tag);
+  }
+
+  private void initValuesByTag() {
+    if (valuesByTag != null) {
+      return;
+    }
+
+    valuesByTag = new LinkedHashMap<String, Boolean>();
+    valuesByTag.put("-" + (isExperimental() ? "X" : "") + getLabel(), true);
+    valuesByTag.put("-" + (isExperimental() ? "X" : "") + "no" + getLabel(), false);
+  }
 }

@@ -186,4 +186,3 @@
     $doc.addEventListener('keyup', keyHandler, false);
   }
 })(window, document);
-

@@ -155,6 +155,7 @@ public class SuperDevListener implements CodeServerListener {
               + ".nocache.js");
       file.deleteOnExit();
       file.getParentFile().mkdirs();
+      System.out.println("Creating nocache file: " + file.getAbsolutePath());
 
       Map<String, String> replacements = new HashMap<String, String>();
       replacements.put("__MODULE_NAME__", module.getName());
