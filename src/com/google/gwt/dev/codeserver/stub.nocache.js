@@ -16,18 +16,19 @@
 
 /**
  * This startup script is used when we run superdevmode from an app server.
- * 
- * The main goal is to avoid installing bookmarkers to load and recompile
- * the application.
+ *
+ * The main goal is to avoid installing bookmarkers for host:port/module
+ * to load and recompile the application.
  */
 (function($wnd, $doc){
+  // This script supports IE8+
   if (!('sessionStorage' in $wnd)) {
     $wnd.alert('Unable to load Super Dev Mode version of __MODULE_NAME__ because this browser does not support sessionStorage');
     return;
   }
 
-  //Because we don't import properties.js, we set some needed variables.
-  $wnd.__gwt_activeModules = [];
+  //We don't import properties.js so we have to update active modules here
+  $wnd.__gwt_activeModules = $wnd.__gwt_activeModules || [];
   $wnd.__gwt_activeModules['__MODULE_NAME__'] = {
     'moduleName' : '__MODULE_NAME__',
     'bindings' : function() {
@@ -38,25 +39,29 @@
   // Reuse compute script base
   __COMPUTE_SCRIPT_BASE__;
 
-  // doc.head does not exist in IE8
-  var head = $doc.head || $doc.getElementsByTagName('head')[0];
+  // document.head does not exist in IE8
+  var $head = $doc.head || $doc.getElementsByTagName('head')[0];
 
-  // Quick way to compute the user.agent for most common browsers.
+  // Quick way to compute the user.agent.
   // This makes the first compilation run faster, for other browsers
-  // we compile all permutations but only the first time.
+  // we compile all permutations.
   var ua = $wnd.navigator.userAgent.toLowerCase();
-  ua = /webkit/.test(ua) ? 'safari' : /gecko/.test(ua) ? 'gecko1_8' : '';
+  ua = /webkit/.test(ua)? 'safari' : /gecko/.test(ua)? 'gecko1_8' :
+    (n = /msie (8|9|10)/.exec(ua)) ? 'ie' + n[1] : '';
 
   // We use a different key for each module so that we can turn on dev mode
   // independently for each.
   var devModeHookKey = '__gwtDevModeHook:__MODULE_NAME__';
   var devModeSessionKey = '__gwtDevModeSession:__MODULE_NAME__';
 
-  // Compute the superdevmode url, so as the user does not need bookmarkers
+  // Compute some codeserver urls so as the user does not need bookmarkers
   var hostName = $wnd.location.hostname;
   var codsrvUrl = 'http://' + hostName + ':__SUPERDEV_PORT__';
   var codsrvNocacheUrl = codsrvUrl + '/__MODULE_NAME__/__MODULE_NAME__.nocache.js';
-  var codsrvCompileUrl = codsrvUrl + '/recompile/__MODULE_NAME__?user.agent=' + ua + "&_callback=_compile_callback";
+  // appending timestamp to avoid cache issues in IE
+  var codsrvCompileUrl = codsrvUrl +
+      '/recompile/__MODULE_NAME__?user.agent=' + ua +
+      "&_callback=_compile_callback&" + new Date().getTime();
 
   // Save supder-devmode url in session
   $wnd.sessionStorage[devModeHookKey] = codsrvNocacheUrl;
@@ -77,73 +82,108 @@
   // Insert the superdevmode nocache script in the first position of the head
   var devModeScript = $doc.createElement('script');
   devModeScript.src = codsrvNocacheUrl;
-  head.insertBefore(devModeScript, head.firstElementChild || head.children[0]);
-  
-  // EXPERIMENTAL (for discussion during review process)
-  // Show a link in a corner for recompiling the app.
-  // The user can remove this: .gwt-superdev-compile{display:none}
-  // Goal: no need to install bookmarker for host:port/module
-  var compileDiv = $doc.createElement('div');
-  compileDiv.innerHTML = 
-      "<div style='font-family:arial;cursor:pointer;color:#B62323;text-shadow:grey 1px 1px 3px'>" +
-      "\u21bb<div style='position:absolute;right:16%;bottom:0px;font-size:18%;'>GWT</div>" +
-      "</div>";
-  compileDiv.title = 'Compile module: __MODULE_NAME__';
-  compileDiv.className = 'gwt-superdev-compile';
-  compileDiv.style.position = 'fixed';
-  compileDiv.style.right = '3px';
-  compileDiv.style.bottom = '2px';
-  compileDiv.style.lineHeight = '2em';
-  compileDiv.style.fontSize = '2em';
 
-  compileDiv.style.zindex = 2147483646;
+  // Show a link in a corner for recompiling the app.
+  // The user can remove this: .gwt-sdm {display:none}
+  var compileDiv = $doc.createElement('div');
+  compileDiv.className = 'gwt-sdm compile';
+  compileDiv.innerHTML = '<div></div>';
+  compileDiv.title = 'Compile module: __MODULE_NAME__';
+  // Use CSS so the app could change button style
+  var compileStyle = $doc.createElement('style');
+  $head.appendChild(compileStyle);
+  compileStyle.language = 'text/css';
+  var css =
+    ".gwt-sdm{" +
+      "position:fixed;" +
+      "right:3px;" +
+      "bottom:3px;" +
+      "font-family:arial;" +
+      "font-size:1.8em;" +
+      "cursor:pointer;" +
+      "color:#B62323;" +
+      "text-shadow:grey 1px 1px 3px;" +
+      "z-index:2147483646;" +
+      "white-space:nowrap;" +
+    "}" +
+    ".gwt-sdm div{" +
+      "position:absolute;" +
+      "right:2px;" +
+      "bottom:-3px;" +
+      "font-size:0.3em;" +
+      "opacity:1;" +
+    "}" +
+    ".gwt-sdm.compile:before{" +
+      "content:'\u21bb';" +
+    "}" +
+    ".gwt-sdm.compile div:before{" +
+      "content:'GWT';" +
+    "}" +
+    ".gwt-sdm.compiling div:before{" +
+      "content:'COMPILING __MODULE_NAME__ ... ';" +
+    "}" +
+    ".gwt-sdm.error div:before{" +
+      "content:'FAILED';" +
+    "}" +
+    ".gwt-sdm.compiling div{" +
+      "font-size:0.5em;" +
+    "}";
+  if ('styleSheet' in compileStyle) {
+    compileStyle.styleSheet.cssText = css;
+  } else {
+    compileStyle.appendChild($doc.createTextNode(css));
+  }
+
   compileDiv.onclick = function() {
     compile();
   };
+
   // defer so as the body is ready
   setTimeout(function(){
+    $head.insertBefore(devModeScript, $head.firstElementChild || $head.children[0]);
     $doc.body.appendChild(compileDiv);
   }, 1);
 
-  // EXPERIMENTAL (for discussion during review process)
-  // Configure Ctrl-K for recompiling the app
-  // Goal: no need to install bookmarker for host:port/module
-  $doc.addEventListener('keyup', function(e){
-    if (e.ctrlKey && e.keyCode == 89) {
-      compile();
-    }
-  }, false);
-
   // Compile this module
   function compile() {
-    // Notice that we are compiling
-    $doc.body.style.opacity = 0.4;
+    compileDiv.className = 'gwt-sdm compiling';
     // Insert the jsonp script to compile
     var compileScript = $doc.createElement('script');
     compileScript.src = codsrvCompileUrl;
-    head.appendChild(compileScript);
+    $head.appendChild(compileScript);
   }
 
   // Compile callback
   $wnd._compile_callback = function(r) {
-    $doc.body.style.opacity = 1;
-    if (r && r.status) {
-      if (r.status == 'ok')
-        $wnd.location.reload();
-      else
-        $wnd.alert(r.status);
+    if (r && r.status && r.status == 'ok') {
+      $wnd.location.reload();
+      return;
     }
+    compileDiv.className = 'gwt-sdm compile error';
   };
 
   // Run this block after the app has been loaded.
   setTimeout(function(){
     // Maintaining the hook key in session can cause problems
-    // if we try to run classic code server.
+    // if we try to run classic code server so we remove it
+    // after a while.
     $wnd.sessionStorage.removeItem(devModeHookKey);
 
-    // Re-attach because sometimes app clears the dom
+    // Re-attach compile button, sometimes app clears the dom
     $doc.body.appendChild(compileDiv);
   }, 2000);
 
+  function keyHandler(e) {
+    if (e.ctrlKey && e.keyCode == 89) {
+      compile();
+    }
+  }
+
+  // Configure Ctrl-Y for recompiling the app
+  if ($doc.attachEvent) {
+    $doc.attachEvent('onkeyup', keyHandler);
+  } else {
+    $doc.addEventListener('keyup', keyHandler, false);
+  }
 })(window, document);
 

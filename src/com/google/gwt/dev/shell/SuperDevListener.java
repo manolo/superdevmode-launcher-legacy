@@ -22,20 +22,10 @@ import com.google.gwt.core.ext.linker.ArtifactSet;
 import com.google.gwt.core.ext.linker.impl.StandardLinkerContext;
 import com.google.gwt.dev.DevMode.HostedModeOptions;
 import com.google.gwt.dev.cfg.ModuleDef;
-import com.google.gwt.dev.jjs.SourceInfo;
-import com.google.gwt.dev.js.JsObfuscateNamer;
-import com.google.gwt.dev.js.JsParser;
-import com.google.gwt.dev.js.JsParserException;
-import com.google.gwt.dev.js.JsSourceGenerationVisitor;
-import com.google.gwt.dev.js.JsSymbolResolver;
-import com.google.gwt.dev.js.JsUnusedFunctionRemover;
-import com.google.gwt.dev.js.ast.JsProgram;
-import com.google.gwt.dev.util.DefaultTextOutput;
 import com.google.gwt.util.tools.Utility;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
@@ -77,21 +67,18 @@ public class SuperDevListener implements CodeServerListener {
         throw new RuntimeException(e);
       }
     }
-    
-    boolean is6 = false;
+
     try {
-      Class<?> opts = Class.forName("com.google.gwt.dev.codeserver.Options");
-      for (Class<?> c : opts.getDeclaredClasses()) {
+      Class<?> clazz = Class.forName("com.google.gwt.dev.codeserver.Options");
+      for (Class<?> c : clazz.getDeclaredClasses()) {
         if ("NoPrecompileFlag".equals(c.getSimpleName())) {
-          is6 = true;
+          args.add("-noprecompile");
           break;
         }
       }
-    } catch (Exception e) {
+    } catch (ClassNotFoundException e) {
     }
-    if (is6) {
-      args.add("-noprecompile");
-    }
+
     args.add("-port");
     args.add(String.valueOf(codSvrPort));
     if (options.getBindAddress() != null) {
@@ -162,7 +149,6 @@ public class SuperDevListener implements CodeServerListener {
           Utility.getFileFromClassPath("com/google/gwt/dev/codeserver/stub.nocache.js");
 
       contents = contents.replace("__COMPUTE_SCRIPT_BASE__", computeScriptBase);
-      contents = obfuscateJs(contents);
 
       File file =
           new File(options.getWarDir() + "/" + module.getName() + "/" + module.getName()
@@ -196,25 +182,5 @@ public class SuperDevListener implements CodeServerListener {
     if (listenThread != null) {
       listenThread.start();
     }
-  }
-
-  private String obfuscateJs(String contents) {
-    try {
-      JsProgram jsProgram = new JsProgram();
-      SourceInfo sourceInfo = jsProgram.createSourceInfo(1, "StandardLinkerContext.optimizeJavaScript");
-      JsParser.parseInto(sourceInfo, jsProgram.getScope(), jsProgram.getGlobalBlock(), new StringReader(contents));
-      JsSymbolResolver.exec(jsProgram);
-      JsUnusedFunctionRemover.exec(jsProgram);
-      JsObfuscateNamer.exec(jsProgram);
-      DefaultTextOutput out = new DefaultTextOutput(true);
-      JsSourceGenerationVisitor v = new JsSourceGenerationVisitor(out);
-      v.accept(jsProgram);
-      contents = out.toString();
-    } catch (IOException e) {
-      logger.log(TreeLogger.ERROR, "Error obfuscating nocache script ", e);
-    } catch (JsParserException e) {
-      logger.log(TreeLogger.ERROR, "Error obfuscating nocache script ", e);
-    }
-    return contents;
   }
 }
