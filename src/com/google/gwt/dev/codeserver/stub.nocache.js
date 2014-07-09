@@ -47,7 +47,7 @@
   // we compile all permutations always.
   var ua = $wnd.navigator.userAgent.toLowerCase();
   ua = /webkit/.test(ua)? 'safari' : /gecko/.test(ua)? 'gecko1_8' :
-    (n = /msie (8|9|10)/.exec(ua)) ? 'ie' + n[1] : '';
+    (n = /msie/.test(ua) && $doc.documentMode) ? 'ie' + n : '';
 
   // We use a different key for each module so that we can turn on dev mode
   // independently for each.
@@ -91,14 +91,14 @@
   $wnd.__gwt_compileElem.appendChild(compileButton);
   // Number of modules present in the window
   var moduleIdx = $wnd.__gwt_compileElem.childNodes.length;
-  // Each button has a class with its index number 
+  // Each button has a class with its index number
   var buttonClassName = 'gwt-DevModeCompile gwt-DevModeModule-' + moduleIdx;
   compileButton.className = buttonClassName;
   // The status message container
   compileButton.innerHTML = '<div></div>';
   // User knows who module to compile, hovering the button
   compileButton.title = 'Compile module:\n__MODULE_NAME__';
-  
+
   // Use CSS so the app could change button style
   var compileStyle = $doc.createElement('style');
   compileStyle.language = 'text/css';
@@ -148,7 +148,7 @@
       "content:'COMPILING __MODULE_NAME__';" +
       "font-size:24px;" +
       "color:#d2d9ee;" +
-    "}";  
+    "}";
   if ('styleSheet' in compileStyle) {
     // IE8
     compileStyle.styleSheet.cssText = css;
@@ -159,7 +159,7 @@
   // export different callback and compile method per module
   var callbackFunction = '__gwt_compile_callback_' + moduleIdx;
   var compileFunction = '__gwt_compile_' + moduleIdx;
-  
+
   compileButton.onclick = function() {
     $wnd[compileFunction]();
   };
@@ -169,7 +169,7 @@
     $head.insertBefore(devModeScript, $head.firstElementChild || $head.children[0]);
     $doc.body.appendChild($wnd.__gwt_compileElem);
   }, 1);
-  
+
   // Compile function available in window so as it can be run from jsni
   $wnd[compileFunction] = function() {
     // Insert the jsonp script to compile
