@@ -55,9 +55,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * The main executable class for the hosted mode shell. NOTE: the public API for this class is to be
- * determined. Consider this class as having <b>no</b> public API other than {@link #main(String[])}
- * .
+ * The main executable class for the hosted mode shell. NOTE: the public API for
+ * this class is to be determined. Consider this class as having <b>no</b>
+ * public API other than {@link #main(String[])}.
  */
 public class DevMode extends DevModeBase implements RestartServerCallback {
 
@@ -97,7 +97,7 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
 
     @Override
     public String getPurposeSnippet() {
-      return "Runs superdev-mode instead of classic dev-mode.";
+      return "Runs Super Dev Mode instead of classic Development Mode.";
     }
 
     @Override
@@ -348,8 +348,7 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
   }
 
   /**
-   * Controls whether to run a server or not.
-   *
+   * Determines whether to start the code server or not.
    */
   protected interface OptionSuperDevMode {
     boolean isSuperDevMode();
@@ -370,9 +369,10 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
    */
   public static void main(String[] args) {
     /*
-     * NOTE: main always exits with a call to System.exit to terminate any non-daemon threads that
-     * were started in Generators. Typically, this is to shutdown AWT related threads, since the
-     * contract for their termination is still implementation-dependent.
+     * NOTE: main always exits with a call to System.exit to terminate any
+     * non-daemon threads that were started in Generators. Typically, this is to
+     * shutdown AWT related threads, since the contract for their termination is
+     * still implementation-dependent.
      */
     DevMode hostedMode = new DevMode();
     if (new ArgProcessor(hostedMode.options).processArgs(args)) {
@@ -568,8 +568,8 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
       }
 
       /*
-       * TODO: This is a hack to pass the base log level to the SCL. We'll have to figure out a
-       * better way to do this for SCLs in general.
+       * TODO: This is a hack to pass the base log level to the SCL. We'll have
+       * to figure out a better way to do this for SCLs in general.
        */
       if (scl instanceof JettyLauncher) {
         JettyLauncher jetty = (JettyLauncher) scl;
@@ -686,5 +686,4 @@ public class DevMode extends DevModeBase implements RestartServerCallback {
       }
     }
   }
-
 }

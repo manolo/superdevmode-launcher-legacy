@@ -17,18 +17,18 @@
 /**
  * This startup script is used when we run superdevmode from an app server.
  *
- * The main goal is to avoid installing bookmarkers for host:port/module
+ * The main goal is to avoid installing bookmarklets for host:port/module
  * to load and recompile the application.
  */
 (function($wnd, $doc){
-  // This script supports IE8+
+  // Don't support browsers without session storage: IE6/7
   if (!('sessionStorage' in $wnd)) {
     $wnd.alert('Unable to load Super Dev Mode version of __MODULE_NAME__ because this browser does not support sessionStorage');
     return;
   }
 
   //We don't import properties.js so we have to update active modules here
-  $wnd.__gwt_activeModules = $wnd.__gwt_activeModules || [];
+  $wnd.__gwt_activeModules = $wnd.__gwt_activeModules || {};
   $wnd.__gwt_activeModules['__MODULE_NAME__'] = {
     'moduleName' : '__MODULE_NAME__',
     'bindings' : function() {
@@ -44,7 +44,7 @@
 
   // Quick way to compute the user.agent.
   // This makes the first compilation run faster, for other browsers
-  // we compile all permutations.
+  // we compile all permutations always.
   var ua = $wnd.navigator.userAgent.toLowerCase();
   ua = /webkit/.test(ua)? 'safari' : /gecko/.test(ua)? 'gecko1_8' :
     (n = /msie (8|9|10)/.exec(ua)) ? 'ie' + n[1] : '';
@@ -54,24 +54,20 @@
   var devModeHookKey = '__gwtDevModeHook:__MODULE_NAME__';
   var devModeSessionKey = '__gwtDevModeSession:__MODULE_NAME__';
 
-  // Compute some codeserver urls so as the user does not need bookmarkers
+  // Compute some codeserver urls so as the user does not need bookmarklets
   var hostName = $wnd.location.hostname;
-  var codsrvUrl = 'http://' + hostName + ':__SUPERDEV_PORT__';
-  var codsrvNocacheUrl = codsrvUrl + '/__MODULE_NAME__/__MODULE_NAME__.nocache.js';
-  // appending timestamp to avoid cache issues in IE
-  var codsrvCompileUrl = codsrvUrl +
-      '/recompile/__MODULE_NAME__?user.agent=' + ua +
-      "&_callback=_compile_callback&" + new Date().getTime();
+  var serverUrl = 'http://' + hostName + ':__SUPERDEV_PORT__';
+  var nocacheUrl = serverUrl + '/__MODULE_NAME__/__MODULE_NAME__.nocache.js';
 
   // Save supder-devmode url in session
-  $wnd.sessionStorage[devModeHookKey] = codsrvNocacheUrl;
+  $wnd.sessionStorage[devModeHookKey] = nocacheUrl;
   // Save user.agent in session
   if (ua) {
     $wnd.sessionStorage[devModeSessionKey] = 'user.agent=' + ua + '&';
   }
 
   // Set bookmarklet params in window
-  $wnd.__gwt_bookmarklet_params = {'server_url': codsrvUrl};
+  $wnd.__gwt_bookmarklet_params = {'server_url': serverUrl};
   // Save the original module base. (Returned by GWT.getModuleBaseURL.)
   $wnd[devModeHookKey + ':moduleBase'] = computeScriptBase();
 
@@ -81,20 +77,34 @@
 
   // Insert the superdevmode nocache script in the first position of the head
   var devModeScript = $doc.createElement('script');
-  devModeScript.src = codsrvNocacheUrl;
+  devModeScript.src = nocacheUrl;
 
-  // Show a link in a corner for recompiling the app.
-  // The user can remove this: .gwt-sdm {display:none}
-  var compileDiv = $doc.createElement('div');
-  compileDiv.className = 'gwt-sdm compile';
-  compileDiv.innerHTML = '<div></div>';
-  compileDiv.title = 'Compile module: __MODULE_NAME__';
+  // Show a div in a corner for adding buttons to recompile the app.
+  // We reuse the same div in all modules of this page for stacking buttons
+  // and to make it available in jsni.
+  // The user can remove this: .gwt-DevModeRefresh {display:none}
+  $wnd.__gwt_compileElem = $wnd.__gwt_compileElem || $doc.createElement('div');
+  $wnd.__gwt_compileElem.className = 'gwt-DevModeRefresh';
+
+  // Create the compile button for this module
+  var compileButton = $doc.createElement('div');
+  $wnd.__gwt_compileElem.appendChild(compileButton);
+  // Number of modules present in the window
+  var moduleIdx = $wnd.__gwt_compileElem.childNodes.length;
+  // Each button has a class with its index number 
+  var buttonClassName = 'gwt-DevModeCompile gwt-DevModeModule-' + moduleIdx;
+  compileButton.className = buttonClassName;
+  // The status message container
+  compileButton.innerHTML = '<div></div>';
+  // User knows who module to compile, hovering the button
+  compileButton.title = 'Compile module:\n__MODULE_NAME__';
+  
   // Use CSS so the app could change button style
   var compileStyle = $doc.createElement('style');
-  $head.appendChild(compileStyle);
   compileStyle.language = 'text/css';
+  $head.appendChild(compileStyle);
   var css =
-    ".gwt-sdm{" +
+    ".gwt-DevModeRefresh{" +
       "position:fixed;" +
       "right:3px;" +
       "bottom:3px;" +
@@ -106,60 +116,79 @@
       "z-index:2147483646;" +
       "white-space:nowrap;" +
     "}" +
-    ".gwt-sdm div{" +
+    ".gwt-DevModeCompile{" +
+      "position:relative;" +
+      "float:left;" +
+      "width:1em;" +
+    "}" +
+    ".gwt-DevModeCompile div{" +
       "position:absolute;" +
-      "right:2px;" +
+      "right:1em;" +
       "bottom:-3px;" +
       "font-size:0.3em;" +
       "opacity:1;" +
+      "direction:rtl;" +
     "}" +
-    ".gwt-sdm.compile:before{" +
+    ".gwt-DevModeCompile:before{" +
       "content:'\u21bb';" +
     "}" +
-    ".gwt-sdm.compile div:before{" +
+    ".gwt-DevModeCompiling:before{" +
+      // IE8 fails when setting content here
+      "opacity:0.1;" +
+    "}" +
+    ".gwt-DevModeCompile div:before{" +
       "content:'GWT';" +
     "}" +
-    ".gwt-sdm.compiling div:before{" +
-      "content:'COMPILING __MODULE_NAME__ ... ';" +
-    "}" +
-    ".gwt-sdm.error div:before{" +
+    ".gwt-DevModeError div:before{" +
       "content:'FAILED';" +
-    "}" +
-    ".gwt-sdm.compiling div{" +
-      "font-size:0.5em;" +
     "}";
+  // Only insert common css the first time
+  css = (moduleIdx == 1 ? css : '') +
+    ".gwt-DevModeModule-" + moduleIdx + ".gwt-DevModeCompiling div:before{" +
+      "content:'COMPILING __MODULE_NAME__';" +
+      "font-size:24px;" +
+      "color:#d2d9ee;" +
+    "}";  
   if ('styleSheet' in compileStyle) {
+    // IE8
     compileStyle.styleSheet.cssText = css;
   } else {
     compileStyle.appendChild($doc.createTextNode(css));
   }
 
-  compileDiv.onclick = function() {
-    compile();
+  // export different callback and compile method per module
+  var callbackFunction = '__gwt_compile_callback_' + moduleIdx;
+  var compileFunction = '__gwt_compile_' + moduleIdx;
+  
+  compileButton.onclick = function() {
+    $wnd[compileFunction]();
   };
 
   // defer so as the body is ready
   setTimeout(function(){
     $head.insertBefore(devModeScript, $head.firstElementChild || $head.children[0]);
-    $doc.body.appendChild(compileDiv);
+    $doc.body.appendChild($wnd.__gwt_compileElem);
   }, 1);
-
-  // Compile this module
-  function compile() {
-    compileDiv.className = 'gwt-sdm compiling';
+  
+  // Compile function available in window so as it can be run from jsni
+  $wnd[compileFunction] = function() {
     // Insert the jsonp script to compile
     var compileScript = $doc.createElement('script');
-    compileScript.src = codsrvCompileUrl;
+    compileScript.src = serverUrl +
+      '/recompile/__MODULE_NAME__?user.agent=' + ua +
+      '&_callback=' + callbackFunction +
+       // appending timestamp to avoid cache issues in IE
+      '&' + new Date().getTime();;
     $head.appendChild(compileScript);
+    compileButton.className = buttonClassName  + ' gwt-DevModeCompiling';
   }
 
-  // Compile callback
-  $wnd._compile_callback = function(r) {
-    if (r && r.status && r.status == 'ok') {
+  // Compile callback function
+  $wnd[callbackFunction] = function(r) {
+    if (r && r.status && r.status == 'ok')
       $wnd.location.reload();
-      return;
-    }
-    compileDiv.className = 'gwt-sdm compile error';
+    else
+      compileButton.className = buttonClassName + ' gwt-DevModeError';
   };
 
   // Run this block after the app has been loaded.
@@ -169,20 +198,7 @@
     // after a while.
     $wnd.sessionStorage.removeItem(devModeHookKey);
 
-    // Re-attach compile button, sometimes app clears the dom
-    $doc.body.appendChild(compileDiv);
+    // Re-attach compile button because sometimes app clears the dom
+    $doc.body.appendChild($wnd.__gwt_compileElem);
   }, 2000);
-
-  function keyHandler(e) {
-    if (e.ctrlKey && e.keyCode == 89) {
-      compile();
-    }
-  }
-
-  // Configure Ctrl-Y for recompiling the app
-  if ($doc.attachEvent) {
-    $doc.attachEvent('onkeyup', keyHandler);
-  } else {
-    $doc.addEventListener('keyup', keyHandler, false);
-  }
 })(window, document);
