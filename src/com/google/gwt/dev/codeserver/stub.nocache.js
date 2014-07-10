@@ -22,8 +22,9 @@
  */
 (function($wnd, $doc){
   // Don't support browsers without session storage: IE6/7
+  var badBrowser = 'Unable to load Super Dev Mode of "__MODULE_NAME__" because\n';
   if (!('sessionStorage' in $wnd)) {
-    $wnd.alert('Unable to load Super Dev Mode version of __MODULE_NAME__ because this browser does not support sessionStorage');
+    $wnd.alert(badBrowser +  'this browser does not support "sessionStorage".');
     return;
   }
 
@@ -42,12 +43,18 @@
   // document.head does not exist in IE8
   var $head = $doc.head || $doc.getElementsByTagName('head')[0];
 
-  // Quick way to compute the user.agent.
-  // This makes the first compilation run faster, for other browsers
-  // we compile all permutations always.
+  // Quick way to compute the user.agent, it works almost the same than
+  // UserAgentPropertyGenerator, but we cannot reuse it without depending
+  // on gwt-user.jar.
+  // This reduces compilation time since we only compile for one ua.
   var ua = $wnd.navigator.userAgent.toLowerCase();
-  ua = /webkit/.test(ua)? 'safari' : /gecko/.test(ua)? 'gecko1_8' :
-    (n = /msie/.test(ua) && $doc.documentMode) ? 'ie' + n : '';
+  var docMode = $doc.documentMode || 0;
+  ua = /webkit/.test(ua)? 'safari' : /gecko/.test(ua) || docMode > 10 ? 'gecko1_8' :
+       /msie/.test(ua) && docMode > 7 ? 'ie' + docMode : '';
+  if (!ua && docMode) {
+    $wnd.alert(badBrowser +  'your browser is running "Compatibility View" for IE' + docMode + '.');
+    return;
+  }
 
   // We use a different key for each module so that we can turn on dev mode
   // independently for each.
@@ -62,9 +69,7 @@
   // Save supder-devmode url in session
   $wnd.sessionStorage[devModeHookKey] = nocacheUrl;
   // Save user.agent in session
-  if (ua) {
-    $wnd.sessionStorage[devModeSessionKey] = 'user.agent=' + ua + '&';
-  }
+  $wnd.sessionStorage[devModeSessionKey] = 'user.agent=' + ua + '&';
 
   // Set bookmarklet params in window
   $wnd.__gwt_bookmarklet_params = {'server_url': serverUrl};
@@ -156,8 +161,7 @@
     compileStyle.appendChild($doc.createTextNode(css));
   }
 
-  // export different callback and compile method per module
-  var callbackFunction = '__gwt_compile_callback_' + moduleIdx;
+  // Set a different compile function name per module
   var compileFunction = '__gwt_compile_' + moduleIdx;
 
   compileButton.onclick = function() {
@@ -170,26 +174,39 @@
     $doc.body.appendChild($wnd.__gwt_compileElem);
   }, 1);
 
-  // Compile function available in window so as it can be run from jsni
+  // Flag to avoid compiling in parallel.
+  var compiling = false;
+  // Compile function available in window so as it can be run from jsni.
+  // TODO: make Super Dev Mode script set this function in __gwt_activeModules
   $wnd[compileFunction] = function() {
-    // Insert the jsonp script to compile
+    if (compiling) {
+      return;
+    }
+    compiling = true;
+
+    // Compute an unique name for each callback to avoid cache issues
+    // in IE, and to avoid the same function being called twice.
+    var callback = '__gwt_compile_callback_' + moduleIdx + '_' + new Date().getTime();
+    $wnd[callback] = function(r) {
+      if (r && r.status && r.status == 'ok') {
+        $wnd.location.reload();
+      }
+      compileButton.className = buttonClassName + ' gwt-DevModeError';
+      delete $wnd[callback];
+      compiling = false;
+    };
+
+    // Insert the jsonp script to compile the current module
     var compileScript = $doc.createElement('script');
     compileScript.src = serverUrl +
-      '/recompile/__MODULE_NAME__?user.agent=' + ua +
-      '&_callback=' + callbackFunction +
-       // appending timestamp to avoid cache issues in IE
-      '&' + new Date().getTime();;
+      '/recompile/__MODULE_NAME__?user.agent=' + ua + '&_callback=' + callback;
     $head.appendChild(compileScript);
     compileButton.className = buttonClassName  + ' gwt-DevModeCompiling';
-  }
 
-  // Compile callback function
-  $wnd[callbackFunction] = function(r) {
-    if (r && r.status && r.status == 'ok')
-      $wnd.location.reload();
-    else
-      compileButton.className = buttonClassName + ' gwt-DevModeError';
-  };
+    // Fail after a long without the page being reloaded, only should
+    // happen if server is down or compilation got stalled.
+    setTimeout($wnd[callback], 90000);
+  }
 
   // Run this block after the app has been loaded.
   setTimeout(function(){
