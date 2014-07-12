@@ -163,11 +163,14 @@ public class SuperDevListener implements CodeServerListener {
 
       Utility.writeTemplateFile(file, contents, replacements);
 
+      // TODO(manolo): make codeserver accept multiple user.agent separated by comma
+      // and empty _callback parameter returning json.
       String recompileUrl =
           "http://" + options.getConnectAddress() + ":" + codSvrPort + "/recompile/"
-              + module.getName() + "?user.agent=safari";
+              + module.getName() + "?_callback=cback&user.agent=safari,gecko1_8,ie8,ie9,ie10";
 
-      System.out.println("To compile, visit: " + recompileUrl);
+      System.out.println("To compile the module '" + module.getName()
+          + "' , visit:\n " + recompileUrl);
     } catch (IOException e) {
       logger.log(TreeLogger.ERROR, "Unable to create nocache script ", e);
       throw new UnableToCompleteException();

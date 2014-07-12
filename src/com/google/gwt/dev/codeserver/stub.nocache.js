@@ -177,7 +177,7 @@
   // Flag to avoid compiling in parallel.
   var compiling = false;
   // Compile function available in window so as it can be run from jsni.
-  // TODO: make Super Dev Mode script set this function in __gwt_activeModules
+  // TODO(manolo): make Super Dev Mode script set this function in __gwt_activeModules
   $wnd[compileFunction] = function() {
     if (compiling) {
       return;
@@ -197,15 +197,13 @@
     };
 
     // Insert the jsonp script to compile the current module
+    // TODO(manolo): we don't have a way to detect when the server is unreachable,
+    // maybe a request returning status='idle'
     var compileScript = $doc.createElement('script');
     compileScript.src = serverUrl +
       '/recompile/__MODULE_NAME__?user.agent=' + ua + '&_callback=' + callback;
     $head.appendChild(compileScript);
     compileButton.className = buttonClassName  + ' gwt-DevModeCompiling';
-
-    // Fail after a long without the page being reloaded, only should
-    // happen if server is down or compilation got stalled.
-    setTimeout($wnd[callback], 90000);
   }
 
   // Run this block after the app has been loaded.
