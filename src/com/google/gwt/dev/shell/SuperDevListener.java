@@ -68,6 +68,9 @@ public class SuperDevListener implements CodeServerListener {
       }
     }
 
+    // Let RemoteServiceServlet know the location of RPC serialization policies (issue #8850)
+    System.setProperty("gwt.codeserver.port", String.valueOf(codeServerPort));
+
     try {
       Class<?> clazz = Class.forName("com.google.gwt.dev.codeserver.Options");
       for (Class<?> c : clazz.getDeclaredClasses()) {
